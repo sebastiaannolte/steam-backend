@@ -43,8 +43,8 @@ services:
       image: nginx:stable-alpine
       container_name: "nginx"
       environment:
-        - "VIRTUAL_HOST=steam.test"
-        - "LETSENCRYPT_HOST=steam.test"
+        - "VIRTUAL_HOST=steam.hcim.eu"
+        - "LETSENCRYPT_HOST=steam.hcim.eu"
         - "LETSENCRYPT_EMAIL=sebas@hotmail.nl"
       expose:
         - "80"
