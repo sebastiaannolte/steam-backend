@@ -88,6 +88,6 @@ ENV/
 # Rope project settings
 .ropeproject
 
-.devcontainer
+.devcontainer/
 flask_session
 .env
