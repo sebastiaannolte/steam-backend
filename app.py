@@ -138,7 +138,7 @@ def user():
     Returns:
         Object: is_authenticated and optional the name
     """
-    print(os.environ['SECRET_KEY'], flush=True)
+
     if current_user.is_authenticated:
         return {"is_authenticated": True, "name": current_user.nickname}
     return {"is_authenticated": False}
