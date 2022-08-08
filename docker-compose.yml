@@ -41,7 +41,7 @@ services:
 
     nginx:
       image: nginx:stable-alpine
-      container_name: "nginx"
+      container_name: "nginx-steam"
       environment:
         - "VIRTUAL_HOST=steam.hcim.eu"
         - "LETSENCRYPT_HOST=steam.hcim.eu"
