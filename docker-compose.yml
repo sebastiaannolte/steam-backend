@@ -1,24 +1,18 @@
 version: '3'
 services:
-    web:
+    web-py:
         build:
           context: .
-          args:
-            APP_PORT: 5001
-        ports:
-            - "${APP_PORT}:${APP_PORT}"
         volumes:
-            - .:/var/www/html
-        # networks:
-        #   - db_nw
-        #   - web_nw
-        networks:
-          - steamnetwork
-        depends_on:
-          - db
+          - ./app:/src/app
         env_file:
           - ./.env
-    db:
+        environment:
+          - VIRTUAL_HOST=${VIRTUAL_HOST}
+          - VIRTUAL_PORT=${APP_PORT}
+          - LETSENCRYPT_HOST=${VIRTUAL_HOST}
+          - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+    db-py:
         image: postgres:14-alpine
         ports:
           - "${DB_PORT}:${DB_PORT}"
@@ -28,43 +22,9 @@ services:
           POSTGRES_USER: ${DB_USER}
           POSTGRES_PASSWORD: ${DB_PASS}
           POSTGRES_DB: ${DB_NAME}
-        # networks:
-        #   - db_nw
-        networks:
-          - steamnetwork
-    # nginx:
-    #   image: "nginx:1.13.5"
-    #   ports:
-    #     - "8080:80"
-    #   volumes:
-    #     - ./conf.d:/etc/nginx/conf.d
-    #   networks:
-    #     - web_nw
-    #   depends_on: 
-    #     - web
-
-    nginx:
-      image: nginx:stable-alpine
-      container_name: "nginx-steam"
-      environment:
-        - "VIRTUAL_HOST=steam.hcim.eu"
-        - "LETSENCRYPT_HOST=steam.hcim.eu"
-        - "LETSENCRYPT_EMAIL=sebas@hotmail.nl"
-      expose:
-        - "80"
-      volumes:
-        - ".:/var/www/html"
-        - ./nginx:/etc/nginx/conf.d
-      # network_mode: bridge
-      networks:
-        - steamnetwork
-      restart: always
-      depends_on:
-        - web
-      links:
-        - web
 volumes:
     postgres_data:      
 networks:
-    steamnetwork:
-        driver: bridge
+  default:
+    external:
+      name: nginx-proxy

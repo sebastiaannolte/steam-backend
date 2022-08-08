@@ -1,10 +1,15 @@
 FROM python:3.10.4-slim-buster
 
-WORKDIR /app
+ENV SRCDIR /src
+RUN mkdir -p $SRCDIR/app && chown -R root:root $SRCDIR
 
-COPY requirements.txt requirements.txt
+WORKDIR $SRCDIR
+
+COPY requirements.txt $SRCDIR
 RUN pip3 install -r requirements.txt
 
-COPY . .
+COPY . $SRCDIR
+EXPOSE 5000
+WORKDIR $SRCDIR/app
 
 CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0", "--port=5000"]
