@@ -1,0 +1,27 @@
+version: '3'
+services:
+    web:
+        build:
+          context: .
+          args:
+            APP_PORT: 5001
+        ports:
+            - "${APP_PORT}:${APP_PORT}"
+        volumes:
+            - .:/app
+        depends_on:
+          - db
+        env_file:
+          - ./.env
+    db:
+        image: postgres:14-alpine
+        ports:
+          - "${DB_PORT}:${DB_PORT}"
+        volumes:
+          - postgres_data:/var/lib/postgresql/data/
+        environment:
+          POSTGRES_USER: ${DB_USER}
+          POSTGRES_PASSWORD: ${DB_PASS}
+          POSTGRES_DB: ${DB_NAME}
+volumes:
+    postgres_data:         
