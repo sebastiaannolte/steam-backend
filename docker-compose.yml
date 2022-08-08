@@ -8,7 +8,10 @@ services:
         ports:
             - "${APP_PORT}:${APP_PORT}"
         volumes:
-            - .:/app
+            - .:/var/www/html
+        # networks:
+        #   - db_nw
+        #   - web_nw
         depends_on:
           - db
         env_file:
@@ -23,5 +26,40 @@ services:
           POSTGRES_USER: ${DB_USER}
           POSTGRES_PASSWORD: ${DB_PASS}
           POSTGRES_DB: ${DB_NAME}
+        # networks:
+        #   - db_nw
+    # nginx:
+    #   image: "nginx:1.13.5"
+    #   ports:
+    #     - "8080:80"
+    #   volumes:
+    #     - ./conf.d:/etc/nginx/conf.d
+    #   networks:
+    #     - web_nw
+    #   depends_on: 
+    #     - web
+
+    nginx:
+      image: nginx:stable-alpine
+      container_name: "nginx"
+      environment:
+        - "VIRTUAL_HOST=steam.test"
+        - "LETSENCRYPT_HOST=steam.test"
+        - "LETSENCRYPT_EMAIL=sebas@hotmail.nl"
+      expose:
+        - "80"
+      volumes:
+        - ".:/var/www/html"
+        - ./nginx:/etc/nginx/conf.d
+      # network_mode: bridge
+      restart: always
+      depends_on:
+        - web
+      links:
+        - web
 volumes:
-    postgres_data:         
+    postgres_data:      
+networks:
+  default:
+    external:
+      name: nginx-proxy
