@@ -1,6 +1,6 @@
 version: '3'
 services:
-    web-py:
+    web:
         build:
           context: .
         volumes:
@@ -12,7 +12,7 @@ services:
           - VIRTUAL_PORT=${APP_PORT}
           - LETSENCRYPT_HOST=${VIRTUAL_HOST}
           - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
-    db-py:
+    db:
         image: postgres:14-alpine
         ports:
           - "${DB_PORT}:${DB_PORT}"
