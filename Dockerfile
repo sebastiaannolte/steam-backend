@@ -12,4 +12,4 @@ COPY . $SRCDIR
 EXPOSE 5000
 WORKDIR $SRCDIR/app
 
-CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0", "--port=5000"]
+CMD ["gunicorn", "-w", "1", "-b", "0.0.0.0:5000", "wsgi:app"]

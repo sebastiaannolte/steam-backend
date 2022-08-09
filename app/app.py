@@ -21,8 +21,8 @@ from sqlalchemy import (
     text,
 )
 
-
 app = Flask(__name__)
+
 cors = CORS(app)
 
 app.secret_key = os.environ["SECRET_KEY"]
