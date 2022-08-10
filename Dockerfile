@@ -10,6 +10,6 @@ RUN pip3 install -r requirements.txt
 
 COPY . $SRCDIR
 EXPOSE 5000
-WORKDIR $SRCDIR/app
+# WORKDIR $SRCDIR/app
 
-CMD ["gunicorn", "-w", "1", "-b", "0.0.0.0:5000", "wsgi:app"]
+CMD ["gunicorn", "-w", "1", "-b", "0.0.0.0:5000", "run:app"]

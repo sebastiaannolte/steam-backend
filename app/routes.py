@@ -2,89 +2,25 @@
 from urllib.parse import urlencode
 import re
 import os
-import urllib.request
-from functools import wraps
+import requests
 from flask_login import (
-    LoginManager,
     login_user,
     logout_user,
     login_required,
     current_user,
 )
-from flask_cors import CORS
-from flask import Flask, request, redirect, json, abort, url_for
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-import requests
+from flask import request, redirect, abort, url_for
 from sqlalchemy import (
-    create_engine,
     text,
 )
-
-app = Flask(__name__)
-app.secret_key = os.environ["SECRET_KEY"]
-
-cors = CORS(app)
-
-login_manager = LoginManager()
-login_manager.init_app(app)
+from app import engine, app, db
+from app.models import User, Votes, Games, VotesSchema
+from app.functions import validate, get_user_info
+from app.decorators import admin_required
 
 
-@login_manager.user_loader
-def load_user(user_id):
-    """Load the user for Flask-login
-
-    Args:
-        user_id (Integer): The user_id to load
-
-    Returns:
-        User: User model
-    """
-    return User.query.get(user_id)
-
-
-DATABASE_URI = "postgresql+psycopg2://{dbuser}:{dbpass}@{dbhost}/{dbname}".format(
-    dbuser=os.environ["DB_USER"],
-    dbpass=os.environ["DB_PASS"],
-    dbhost=os.environ["DB_HOST"],
-    dbname=os.environ["DB_NAME"],
-)
-engine = create_engine(DATABASE_URI)
-app.config.update(
-    SQLALCHEMY_DATABASE_URI=DATABASE_URI,
-    SQLALCHEMY_TRACK_MODIFICATIONS=False,
-)
-
-# Initialize the database connection
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
 steam_id_re = re.compile("https://steamcommunity.com/openid/id/(.*?)$")
-# Create databases, if databases exists doesn't issue create
-# For schema changes, run "flask db migrate"
-from models import User, Votes, Games, VotesSchema
-
-db.create_all()
-db.session.commit()
-
 steam_openid_url = "https://steamcommunity.com/openid/login"
-
-def get_user_info(steam_id):
-    """Get user info from the steam api
-
-    Args:
-        steam_id (Integer): Steam ID of the user
-
-    Returns:
-        Object: Steam user
-    """
-    options = {"key": os.environ["STEAM_API_KEY"], "steamids": steam_id}
-    url = (
-        "https://api.steampowered.com/ISteamUser/"
-        "GetPlayerSummaries/v0002/?%s" % urllib.parse.urlencode(options)
-    )
-
-    response = json.load(urllib.request.urlopen(url))
-    return response["response"]["players"][0] or {}
 
 
 @app.route("/auth")
@@ -108,30 +44,6 @@ def auth_with_steam():
 
     return redirect(auth_url)
 
-def validate(signed_params):
-    """Validate the authentication
-
-    Returns:
-        boolean
-    """
-    params = {
-        "openid.assoc_handle": signed_params["openid.assoc_handle"],
-        "openid.sig": signed_params["openid.sig"],
-        "openid.ns": signed_params["openid.ns"],
-        "openid.mode": "check_authentication"
-    }
-    signed_params = signed_params.to_dict()
-    signed_params.update(params)
-
-    signed_params["openid.mode"] = "check_authentication"
-    signed_params["openid.signed"] = signed_params["openid.signed"]
-
-    req = requests.post(steam_openid_url, data=signed_params)
-
-    if "is_valid:true" in req.text:
-        return True
-
-    return False
 
 @app.route("/authorize")
 def authorize():
@@ -140,7 +52,7 @@ def authorize():
     Returns:
         redirect: Redirect to sucess page or 401
     """
-    valid = validate(request.args)
+    valid = validate(request.args, steam_openid_url)
     if valid is False:
         return abort(401)
     match = steam_id_re.search(dict(request.args)["openid.identity"])
@@ -149,7 +61,8 @@ def authorize():
     db_user.nickname = steam_data["personaname"]
     db.session.commit()
     login_user(user=db_user, remember=True)
-    return redirect(url_for('login_success'))
+    return redirect(url_for("login_success"))
+
 
 @app.route("/success")
 @login_required
@@ -164,6 +77,8 @@ def login_success():
         + current_user.nickname
         + ". Refresh the Steam page to start voting!"
     )
+
+
 @app.route("/user")
 @login_required
 def user():
@@ -197,6 +112,7 @@ def vote():
         sql = text(
             "SELECT vote, count(vote) from votes where app_id ="
             + data["app_id"]
+            + " and deleted = False "
             + "group by vote"
         )
         results = engine.execute(sql)
@@ -209,6 +125,7 @@ def vote():
         user_vote = (
             Votes.query.filter_by(user_id=current_user.id)
             .filter_by(app_id=data["app_id"])
+            .filter_by(deleted=False)
             .first()
         )
         if user_vote:
@@ -244,6 +161,7 @@ def votes(steam_id):
     sql = text(
         "SELECT vote, count(vote) from votes where app_id ="
         + steam_id
+        + " AND deleted = False "
         + "group by vote"
     )
     results = engine.execute(sql)
@@ -257,6 +175,7 @@ def votes(steam_id):
         user_vote = (
             Votes.query.filter_by(user_id=current_user.id)
             .filter_by(app_id=steam_id)
+            .filter_by(deleted=False)
             .first()
         )
         vote_schema = VotesSchema()
@@ -286,21 +205,9 @@ def logout():
     return {"success": True}
 
 
-def admin_required(f):
-    @wraps(f)
-    def wrap(*args, **kwargs):
-        if current_user.is_admin is True:
-            return f(*args, **kwargs)
-        else:
-            return abort(401)
-
-    return wrap
-
-
 @app.route("/update-games")
 @admin_required
 def update_games():
-
     """Update or create Steam games in DB
 
     Returns:

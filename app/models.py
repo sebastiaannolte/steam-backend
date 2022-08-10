@@ -10,9 +10,8 @@ from sqlalchemy import (
     Boolean,
 )
 from sqlalchemy.orm import declarative_base, relationship
-from flask_marshmallow import Marshmallow
 from flask_login import UserMixin
-from app import db, app
+from app import app, db, ma
 
 Base = declarative_base()
 
@@ -104,6 +103,7 @@ class Votes(db.Model):
         BigInteger, ForeignKey("user.id", ondelete="CASCADE"), nullable=False
     )
     vote = Column(Integer, nullable=False)
+    deleted = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -129,19 +129,21 @@ class Votes(db.Model):
             db.session.add(new_vote)
             db.session.commit()
         else:
-            if vote.vote == data["type"]:
-                db.session.delete(vote)
+            if vote.deleted:
+                vote.vote = data["type"]
+                vote.deleted = False
+                db.session.commit()
+            elif vote.vote == data["type"]:
+                vote.deleted = True
                 db.session.commit()
             else:
                 vote.vote = data["type"]
+                vote.deleted = False
                 db.session.commit()
 
 
-ma = Marshmallow(app)
-
-
 class GameSchema(ma.SQLAlchemyAutoSchema):
-    """Schema to return output as JSOn"""
+    """Schema to return output as JSON"""
 
     class Meta:
         """Games model"""
