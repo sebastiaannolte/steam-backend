@@ -12,7 +12,7 @@ from flask_login import (
     current_user,
 )
 from flask_cors import CORS
-from flask import Flask, request, redirect, json, abort
+from flask import Flask, request, redirect, json, abort, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import requests
@@ -22,10 +22,9 @@ from sqlalchemy import (
 )
 
 app = Flask(__name__)
+app.secret_key = os.environ["SECRET_KEY"]
 
 cors = CORS(app)
-
-app.secret_key = os.environ["SECRET_KEY"]
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -67,6 +66,7 @@ from models import User, Votes, Games, VotesSchema
 db.create_all()
 db.session.commit()
 
+steam_openid_url = "https://steamcommunity.com/openid/login"
 
 def get_user_info(steam_id):
     """Get user info from the steam api
@@ -94,7 +94,6 @@ def auth_with_steam():
     Returns:
         redirect: Redirect to the Steam login page
     """
-    steam_openid_url = "https://steamcommunity.com/openid/login"
     params = {
         "openid.ns": "http://specs.openid.net/auth/2.0",
         "openid.identity": "http://specs.openid.net/auth/2.0/identifier_select",
@@ -109,27 +108,62 @@ def auth_with_steam():
 
     return redirect(auth_url)
 
+def validate(signed_params):
+    """Validate the authentication
+
+    Returns:
+        boolean
+    """
+    params = {
+        "openid.assoc_handle": signed_params["openid.assoc_handle"],
+        "openid.sig": signed_params["openid.sig"],
+        "openid.ns": signed_params["openid.ns"],
+        "openid.mode": "check_authentication"
+    }
+    signed_params = signed_params.to_dict()
+    signed_params.update(params)
+
+    signed_params["openid.mode"] = "check_authentication"
+    signed_params["openid.signed"] = signed_params["openid.signed"]
+
+    req = requests.post(steam_openid_url, data=signed_params)
+
+    if "is_valid:true" in req.text:
+        return True
+
+    return False
 
 @app.route("/authorize")
 def authorize():
     """Verify the Steam user and login
 
     Returns:
-        String: Loged in info message
+        redirect: Redirect to sucess page or 401
     """
+    valid = validate(request.args)
+    if valid is False:
+        return abort(401)
     match = steam_id_re.search(dict(request.args)["openid.identity"])
     db_user = User.get_or_create(match.group(1))
     steam_data = get_user_info(db_user.steam_id)
     db_user.nickname = steam_data["personaname"]
     db.session.commit()
     login_user(user=db_user, remember=True)
+    return redirect(url_for('login_success'))
+
+@app.route("/success")
+@login_required
+def login_success():
+    """Status page if login is successful
+
+    Returns:
+        String: Logged in info message
+    """
     return (
         "You are logged in as "
-        + steam_data["personaname"]
+        + current_user.nickname
         + ". Refresh the Steam page to start voting!"
     )
-
-
 @app.route("/user")
 @login_required
 def user():
