@@ -9,7 +9,7 @@ from flask_login import (
     login_required,
     current_user,
 )
-from flask import request, redirect, abort, url_for
+from flask import request, redirect, abort, url_for, render_template
 from sqlalchemy import (
     text,
 )
@@ -22,6 +22,9 @@ from app.decorators import admin_required
 steam_id_re = re.compile("https://steamcommunity.com/openid/id/(.*?)$")
 steam_openid_url = "https://steamcommunity.com/openid/login"
 
+@app.route("/")
+def index():
+    return render_template('index.html')
 
 @app.route("/auth")
 def auth_with_steam():
