@@ -40,6 +40,6 @@ from app import routes
 from app.models import User, Votes, Games
 
 migrate = Migrate()
-
-db.create_all()
-db.session.commit()
+with app.app_context():
+    db.create_all()
+    db.session.commit()
