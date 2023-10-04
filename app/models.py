@@ -147,7 +147,8 @@ class GameSchema(ma.SQLAlchemyAutoSchema):
 
     class Meta:
         """Games model"""
-        pass
+
+        model = Games
 
 
 class UserSchema(ma.SQLAlchemyAutoSchema):
@@ -155,7 +156,8 @@ class UserSchema(ma.SQLAlchemyAutoSchema):
 
     class Meta:
         """User model"""
-        pass
+
+        model = User
 
 
 class VotesSchema(ma.SQLAlchemyAutoSchema):
@@ -163,4 +165,5 @@ class VotesSchema(ma.SQLAlchemyAutoSchema):
 
     class Meta:
         """Votes model"""
-        pass
+
+        model = Votes
