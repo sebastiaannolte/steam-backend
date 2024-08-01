@@ -1,4 +1,5 @@
 import os
+from dotenv import load_dotenv
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
@@ -11,13 +12,16 @@ from sqlalchemy import (
     create_engine,
 )
 
+load_dotenv() 
+
 app = Flask(__name__)
 app.secret_key = os.environ["SECRET_KEY"]
 
-DATABASE_URI = "postgresql+psycopg2://{dbuser}:{dbpass}@{dbhost}/{dbname}".format(
+DATABASE_URI = "postgresql+psycopg2://{dbuser}:{dbpass}@{dbhost}:{dbport}/{dbname}".format(
     dbuser=os.environ["DB_USER"],
     dbpass=os.environ["DB_PASS"],
     dbhost=os.environ["DB_HOST"],
+    dbport=os.environ["DB_PORT"],
     dbname=os.environ["DB_NAME"],
 )
 app.config.update(
@@ -40,6 +44,6 @@ from app import routes
 from app.models import User, Votes, Games
 
 migrate = Migrate()
-
-db.create_all()
-db.session.commit()
+with app.app_context():
+    db.create_all()
+    db.session.commit()
