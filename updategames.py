@@ -5,7 +5,12 @@
 #     update_games()
 
 import logging
+import os
 logging.info("Games updated")
 print("Games updated")
 from dotenv import load_dotenv
 load_dotenv()
+
+print(os.environ['APP_PORT'])
+
+print("Games updated")
